@@ -42,8 +42,8 @@ By default, Linty looks for a `.lintyconfig.json` file in your current directory
       "message": "Don't leave xcxc in docs!",
       "regex": "(XCXC|xcxc)",
       "severity": "error",
-      "include": ["**/*.md"],
-      "exclude": ["**/testing/*.md"]
+      "includes": ["**/*.md"],
+      "excludes": ["**/testing/*.md"]
     }
   ]
 }

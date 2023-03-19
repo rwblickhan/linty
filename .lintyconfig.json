@@ -1,0 +1,18 @@
+{
+  "rules": [
+    {
+      "id": "WarnOnTodos",
+      "message": "Are you sure you meant to leave a TODO?",
+      "regex": "(TODO|todo)",
+      "severity": "warning"
+    },
+    {
+      "id": "NoXcxcInDocs",
+      "message": "Don't leave xcxc in docs!",
+      "regex": "(XCXC|xcxc)",
+      "severity": "error",
+      "includes": ["**/*.md"],
+      "excludes": ["**/testing/*.md"]
+    }
+  ]
+}
