@@ -4,9 +4,11 @@ Simple, language-agnostic linter
 
 ## Table of Contents
 
-- [Background](#background)
-- [Usage](#usage)
-- [Maintainers](#maintainers)
+- [linty](#linty)
+  - [Table of Contents](#table-of-contents)
+  - [Background](#background)
+  - [Usage](#usage)
+  - [Maintainers](#maintainers)
 
 ## Background
 
