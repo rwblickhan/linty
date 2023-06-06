@@ -84,9 +84,14 @@ fn main() -> anyhow::Result<()> {
         match result {
             Err(err) => eprintln!("Error: {}", err),
             Result::Ok(entry) => {
+                if entry.metadata()?.is_dir() {
+                    continue;
+                }
+
                 let mut file_contents = String::new();
                 for rule in &rules {
-                    if !rule.includes.is_match(entry.path()) || rule.excludes.is_match(entry.path())
+                    if (!rule.includes.is_empty() && !rule.includes.is_match(entry.path()))
+                        || rule.excludes.is_match(entry.path())
                     {
                         continue;
                     }
