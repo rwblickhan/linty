@@ -82,7 +82,7 @@ fn main() -> anyhow::Result<()> {
 
     for result in Walk::new("./") {
         match result {
-            Err(err) => eprintln!("Error: {}", err),
+            Err(err) => eprintln!("Error: {err}"),
             Result::Ok(entry) => {
                 if entry.metadata()?.is_dir() {
                     continue;
@@ -121,11 +121,11 @@ fn main() -> anyhow::Result<()> {
             });
 
     for warning in warnings {
-        println!("{:?}", warning);
+        println!("{warning:?}");
     }
 
     for error in errors {
-        println!("{:?}", error);
+        println!("{error:?}");
     }
 
     Ok(())
