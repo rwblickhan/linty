@@ -1,7 +1,7 @@
 use anyhow::Ok;
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use ignore::Walk;
-use regex::{Regex, RegexBuilder};
+use regex::{Match, Regex, RegexBuilder};
 use serde::{Deserialize, Serialize};
 use std::ffi::OsString;
 use std::fs::File;
@@ -44,6 +44,7 @@ struct Violation {
     rule_id: String,
     severity: Severity,
     file: OsString,
+    line: usize,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -100,11 +101,16 @@ fn main() -> anyhow::Result<()> {
                         File::open(entry.path())?.read_to_string(&mut file_contents)?;
                     }
 
-                    if rule.regex.is_match(&file_contents) {
+                    for regex_match in rule.regex.find_iter(&file_contents) {
                         violations.push(Violation {
                             rule_id: rule.id.to_owned(),
                             severity: rule.severity,
                             file: entry.file_name().to_owned(),
+                            line: file_contents[..regex_match.start()]
+                                .chars()
+                                .filter(|&c| c == '\n')
+                                .count()
+                                + 1,
                         })
                     }
                 }
