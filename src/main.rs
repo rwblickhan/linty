@@ -126,12 +126,17 @@ fn main() -> anyhow::Result<()> {
                 Severity::Error => false,
             });
 
-    for warning in warnings {
+    for warning in &warnings {
         println!("{warning:?}");
     }
 
-    for error in errors {
+    for error in &errors {
         println!("{error:?}");
+    }
+
+    if !&errors.is_empty() {
+        eprintln!("Found errors!");
+        std::process::exit(1);
     }
 
     Ok(())
