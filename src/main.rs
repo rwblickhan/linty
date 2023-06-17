@@ -1,7 +1,7 @@
 use anyhow::Ok;
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use ignore::Walk;
-use regex::{Match, Regex, RegexBuilder};
+use regex::{Regex, RegexBuilder};
 use serde::{Deserialize, Serialize};
 use std::ffi::OsString;
 use std::fs::File;
@@ -32,7 +32,6 @@ struct Config {
 
 struct Rule {
     id: String,
-    message: String,
     regex: Regex,
     severity: Severity,
     includes: GlobSet,
@@ -44,7 +43,7 @@ struct Violation {
     rule_id: String,
     severity: Severity,
     file: OsString,
-    line: usize,
+    lines: Vec<usize>,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -55,23 +54,22 @@ fn main() -> anyhow::Result<()> {
 
     let mut rules: Vec<Rule> = Vec::new();
 
-    for rule_config in config.rules {
+    for rule_config in &config.rules {
         let mut include_globs = GlobSetBuilder::new();
         let mut exclude_globs = GlobSetBuilder::new();
 
-        for include in rule_config.includes.unwrap_or(Vec::new()) {
+        for include in rule_config.includes.to_owned().unwrap_or(Vec::new()) {
             include_globs.add(Glob::new(include.as_str())?);
         }
 
-        for exclude in rule_config.excludes.unwrap_or(Vec::new()) {
+        for exclude in rule_config.excludes.to_owned().unwrap_or(Vec::new()) {
             exclude_globs.add(Glob::new(exclude.as_str())?);
         }
 
         let regex = RegexBuilder::new(&rule_config.regex);
 
         rules.push(Rule {
-            id: rule_config.id,
-            message: rule_config.message,
+            id: rule_config.id.to_owned(),
             regex: regex.build()?,
             severity: rule_config.severity,
             includes: include_globs.build()?,
@@ -101,16 +99,21 @@ fn main() -> anyhow::Result<()> {
                         File::open(entry.path())?.read_to_string(&mut file_contents)?;
                     }
 
+                    let mut lines = Vec::new();
                     for regex_match in rule.regex.find_iter(&file_contents) {
+                        let offending_line = file_contents[..regex_match.start()]
+                            .chars()
+                            .filter(|&c| c == '\n')
+                            .count()
+                            + 1;
+                        lines.push(offending_line);
+                    }
+                    if !lines.is_empty() {
                         violations.push(Violation {
                             rule_id: rule.id.to_owned(),
                             severity: rule.severity,
                             file: entry.file_name().to_owned(),
-                            line: file_contents[..regex_match.start()]
-                                .chars()
-                                .filter(|&c| c == '\n')
-                                .count()
-                                + 1,
+                            lines,
                         })
                     }
                 }
@@ -127,11 +130,43 @@ fn main() -> anyhow::Result<()> {
             });
 
     for warning in &warnings {
-        println!("{warning:?}");
+        let message = &config
+            .rules
+            .iter()
+            .find(|rule| rule.id == warning.rule_id)
+            .unwrap()
+            .message;
+        println!("Found warning {}: {}", warning.rule_id, message);
+        println!(
+            "Warning present in file: {}, lines: {}",
+            warning.file.to_str().unwrap(),
+            warning
+                .lines
+                .iter()
+                .map(|line| line.to_string())
+                .collect::<Vec<String>>()
+                .join(", ")
+        );
     }
 
     for error in &errors {
-        println!("{error:?}");
+        let message = &config
+            .rules
+            .iter()
+            .find(|rule| rule.id == error.rule_id)
+            .unwrap()
+            .message;
+        println!("Found error {}: {}", error.rule_id, message);
+        println!(
+            "Error present in file: {}, lines: {}",
+            error.file.to_str().unwrap(),
+            error
+                .lines
+                .iter()
+                .map(|line| line.to_string())
+                .collect::<Vec<String>>()
+                .join(", ")
+        );
     }
 
     if !&errors.is_empty() {
