@@ -3,6 +3,7 @@ use globset::{Glob, GlobSet, GlobSetBuilder};
 use ignore::Walk;
 use regex::{Regex, RegexBuilder};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::ffi::OsString;
 use std::fs::File;
 use std::io::{BufReader, Read};
@@ -129,48 +130,70 @@ fn main() -> anyhow::Result<()> {
                 Severity::Error => false,
             });
 
-    for warning in &warnings {
+    let mut warnings_by_id: HashMap<String, Vec<Violation>> = HashMap::new();
+    for warning in warnings {
+        warnings_by_id
+            .entry(warning.rule_id.to_owned())
+            .or_insert(Vec::new())
+            .push(warning);
+    }
+
+    let mut errors_by_id: HashMap<String, Vec<Violation>> = HashMap::new();
+    for error in errors {
+        errors_by_id
+            .entry(error.rule_id.to_owned())
+            .or_insert(Vec::new())
+            .push(error);
+    }
+
+    for rule_id in warnings_by_id.keys() {
         let message = &config
             .rules
             .iter()
-            .find(|rule| rule.id == warning.rule_id)
+            .find(|rule| &rule.id == rule_id)
             .unwrap()
             .message;
-        println!("Found warning {}: {}", warning.rule_id, message);
-        println!(
-            "Warning present in file: {}, lines: {}",
-            warning.file.to_str().unwrap(),
-            warning
-                .lines
-                .iter()
-                .map(|line| line.to_string())
-                .collect::<Vec<String>>()
-                .join(", ")
-        );
+        println!("Found warning {}: {}", rule_id, message);
+
+        for violation in warnings_by_id.get(rule_id).unwrap() {
+            println!(
+                "Warning present in file: {}, lines: {}",
+                violation.file.to_str().unwrap(),
+                violation
+                    .lines
+                    .iter()
+                    .map(|line| line.to_string())
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            );
+        }
     }
 
-    for error in &errors {
+    for rule_id in errors_by_id.keys() {
         let message = &config
             .rules
             .iter()
-            .find(|rule| rule.id == error.rule_id)
+            .find(|rule| &rule.id == rule_id)
             .unwrap()
             .message;
-        println!("Found error {}: {}", error.rule_id, message);
-        println!(
-            "Error present in file: {}, lines: {}",
-            error.file.to_str().unwrap(),
-            error
-                .lines
-                .iter()
-                .map(|line| line.to_string())
-                .collect::<Vec<String>>()
-                .join(", ")
-        );
+        println!("Found error {}: {}", rule_id, message);
+
+        for violation in errors_by_id.get(rule_id).unwrap() {
+            println!(
+                "Error present in file: {}, lines: {}",
+                violation.file.to_str().unwrap(),
+                violation
+                    .lines
+                    .iter()
+                    .map(|line| line.to_string())
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            );
+        }
     }
 
-    if !&errors.is_empty() {
-        eprintln!("Found errors!");
+    if !&errors_by_id.is_empty() {
+        eprintln!("Failing due to errors");
         std::process::exit(1);
     }
 
