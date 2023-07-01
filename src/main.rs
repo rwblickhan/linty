@@ -1,4 +1,5 @@
 use anyhow::Ok;
+use clap::Parser;
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use ignore::Walk;
 use regex::{Regex, RegexBuilder};
@@ -8,6 +9,14 @@ use std::ffi::OsString;
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::Path;
+
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// Treat warnings as errors
+    #[arg(short, long)]
+    error_on_warning: bool,
+}
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
 #[serde(rename_all = "snake_case")]
@@ -48,6 +57,7 @@ struct Violation {
 }
 
 fn main() -> anyhow::Result<()> {
+    let args = Args::parse();
     let file = File::open(Path::new(".lintyconfig.json"))?;
     let reader = BufReader::new(file);
 
@@ -192,7 +202,7 @@ fn main() -> anyhow::Result<()> {
         }
     }
 
-    if !&errors_by_id.is_empty() {
+    if !&errors_by_id.is_empty() || (args.error_on_warning && !&warnings_by_id.is_empty()) {
         eprintln!("Failing due to errors");
         std::process::exit(1);
     }
