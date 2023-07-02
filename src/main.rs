@@ -153,7 +153,7 @@ fn main() -> anyhow::Result<()> {
             .find(|rule| &rule.id == rule_id)
             .unwrap()
             .message;
-        println!("Found warning {}: {}", rule_id, message);
+        println!("Found warning {rule_id}: {message}");
 
         for violation in warnings_by_id.get(rule_id).unwrap() {
             println!(
@@ -195,7 +195,7 @@ fn main() -> anyhow::Result<()> {
             .find(|rule| &rule.id == rule_id)
             .unwrap()
             .message;
-        println!("Found error {}: {}", rule_id, message);
+        println!("Found error {rule_id}: {message}");
 
         for violation in errors_by_id.get(rule_id).unwrap() {
             println!(
