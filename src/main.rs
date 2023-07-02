@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ffi::OsString;
 use std::fs::File;
+use std::io::Write;
 use std::io::{BufReader, Read};
 use std::path::Path;
 
@@ -20,6 +21,10 @@ struct Args {
     /// Optional path to .lintyconfig.json file
     #[arg(short, long)]
     config_path: Option<String>,
+
+    /// Print warnings and continue without ignore confirmation
+    #[arg(long)]
+    no_confirm: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
@@ -161,6 +166,25 @@ fn main() -> anyhow::Result<()> {
                     .collect::<Vec<String>>()
                     .join(", ")
             );
+        }
+
+        if args.no_confirm {
+            continue;
+        }
+
+        loop {
+            print!("Ignore warning? y/n ");
+            std::io::stdout().flush()?;
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input)?;
+            match input.trim() {
+                "y" => break,
+                "n" => {
+                    eprintln!("Failing due to warnings");
+                    std::process::exit(1);
+                }
+                _ => continue,
+            }
         }
     }
 

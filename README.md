@@ -60,7 +60,7 @@ By default, Linty respects `.gitignore` files, but you can enable checking `.git
 
 If any `error` rules fail, Linty will report all failing rules and exit with exit code 1. If no `error` rules fail, Linty will exit with exit code 0.
 If a `warn` rule fails, Linty will ask the user to confirm the warning manually.
-If the `--error-on-warning` flag is used, warnings will instead be treated as errors; if the `--no-confirm-warning` flag is used, Linty will just print the warning, with no manual confirmation.
+If the `--error-on-warning` flag is used, warnings will instead be treated as errors; if the `--no-confirm` flag is used, Linty will just print the warning, with no manual confirmation.
 
 ## Maintainers
 
