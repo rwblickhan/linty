@@ -71,30 +71,7 @@ fn main() -> anyhow::Result<()> {
 
     let config: Config = serde_json::from_reader(reader)?;
 
-    let mut rules: Vec<Rule> = Vec::new();
-
-    for rule_config in &config.rules {
-        let mut include_globs = GlobSetBuilder::new();
-        let mut exclude_globs = GlobSetBuilder::new();
-
-        for include in rule_config.includes.to_owned().unwrap_or(Vec::new()) {
-            include_globs.add(Glob::new(include.as_str())?);
-        }
-
-        for exclude in rule_config.excludes.to_owned().unwrap_or(Vec::new()) {
-            exclude_globs.add(Glob::new(exclude.as_str())?);
-        }
-
-        let regex = RegexBuilder::new(&rule_config.regex);
-
-        rules.push(Rule {
-            id: rule_config.id.to_owned(),
-            regex: regex.build()?,
-            severity: rule_config.severity,
-            includes: include_globs.build()?,
-            excludes: exclude_globs.build()?,
-        });
-    }
+    let rules = generate_rules_from_config(&config)?;
 
     let mut violations: Vec<Violation> = Vec::new();
 
@@ -216,4 +193,32 @@ fn main() -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+fn generate_rules_from_config(config: &Config) -> anyhow::Result<Vec<Rule>> {
+    let mut rules: Vec<Rule> = Vec::new();
+
+    for rule_config in &config.rules {
+        let mut include_globs = GlobSetBuilder::new();
+        let mut exclude_globs = GlobSetBuilder::new();
+
+        for include in rule_config.includes.to_owned().unwrap_or(Vec::new()) {
+            include_globs.add(Glob::new(include.as_str())?);
+        }
+
+        for exclude in rule_config.excludes.to_owned().unwrap_or(Vec::new()) {
+            exclude_globs.add(Glob::new(exclude.as_str())?);
+        }
+
+        let regex = RegexBuilder::new(&rule_config.regex);
+
+        rules.push(Rule {
+            id: rule_config.id.to_owned(),
+            regex: regex.build()?,
+            severity: rule_config.severity,
+            includes: include_globs.build()?,
+            excludes: exclude_globs.build()?,
+        });
+    }
+    Ok(rules)
 }
