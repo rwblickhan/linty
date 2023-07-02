@@ -16,6 +16,10 @@ struct Args {
     /// Treat warnings as errors
     #[arg(short, long)]
     error_on_warning: bool,
+
+    /// Optional path to .lintyconfig.json file
+    #[arg(short, long)]
+    config_path: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
@@ -58,7 +62,11 @@ struct Violation {
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
-    let file = File::open(Path::new(".lintyconfig.json"))?;
+    let file = if let Some(config_path) = args.config_path {
+        File::open(Path::new(config_path.as_str()))?
+    } else {
+        File::open(Path::new(".lintyconfig.json"))?
+    };
     let reader = BufReader::new(file);
 
     let config: Config = serde_json::from_reader(reader)?;
