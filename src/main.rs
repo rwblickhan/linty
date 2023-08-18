@@ -15,16 +15,19 @@ use std::path::Path;
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Treat warnings as errors
-    #[arg(short, long)]
+    #[arg(long)]
     error_on_warning: bool,
 
     /// Optional path to .lintyconfig.json file
     #[arg(short, long)]
     config_path: Option<String>,
 
-    /// Print warnings and continue without ignore confirmation
+    /// Print warnings and continue without confirmation
     #[arg(long)]
     no_confirm: bool,
+
+    /// Relative paths to files to lint (default: all files in current directory recursively)
+    files: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
@@ -78,6 +81,20 @@ fn main() -> anyhow::Result<()> {
 
     let rules = generate_rules_from_config(&config)?;
 
+    let current_dir = std::env::current_dir()?;
+
+    let mut specified_paths = Vec::new();
+
+    for file in args.files {
+        specified_paths.push(
+            current_dir
+                .join(Path::new(&file))
+                .canonicalize()?
+                .as_os_str()
+                .to_owned(),
+        );
+    }
+
     let mut violations: Vec<Violation> = Vec::new();
 
     for result in Walk::new("./") {
@@ -92,6 +109,9 @@ fn main() -> anyhow::Result<()> {
                 for rule in &rules {
                     if (!rule.includes.is_empty() && !rule.includes.is_match(entry.path()))
                         || rule.excludes.is_match(entry.path())
+                        || (!specified_paths.is_empty()
+                            && !specified_paths
+                                .contains(&entry.path().canonicalize()?.as_os_str().to_owned()))
                     {
                         continue;
                     }
