@@ -1,14 +1,15 @@
 use anyhow::Ok;
 use clap::Parser;
 use globset::{Glob, GlobSet, GlobSetBuilder};
-use ignore::Walk;
+use ignore::WalkBuilder;
 use regex::{Regex, RegexBuilder};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ffi::OsString;
 use std::fs::File;
+use std::io::BufReader;
+use std::io::Read;
 use std::io::Write;
-use std::io::{BufReader, Read};
 use std::path::Path;
 
 #[derive(Parser, Debug)]
@@ -28,6 +29,14 @@ struct Args {
 
     /// Relative paths to files to lint (default: all files in current directory recursively)
     files: Vec<String>,
+
+    /// Include files listed in .gitignore and .ignore files
+    #[arg(long)]
+    ignored: bool,
+
+    /// Include hidden files
+    #[arg(long)]
+    hidden: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
@@ -97,7 +106,12 @@ fn main() -> anyhow::Result<()> {
 
     let mut violations: Vec<Violation> = Vec::new();
 
-    for result in Walk::new("./") {
+    for result in WalkBuilder::new("./")
+        .git_ignore(!args.ignored)
+        .ignore(!args.ignored)
+        .hidden(!args.hidden)
+        .build()
+    {
         match result {
             Err(err) => eprintln!("Error: {err}"),
             Result::Ok(entry) => {
@@ -117,7 +131,28 @@ fn main() -> anyhow::Result<()> {
                     }
 
                     if file_contents.is_empty() {
-                        File::open(entry.path())?.read_to_string(&mut file_contents)?;
+                        let file = File::open(entry.path());
+
+                        match file {
+                            std::io::Result::Ok(mut file) => {
+                                if let Err(err) = file.read_to_string(&mut file_contents) {
+                                    eprintln!(
+                                        "Error: Failed to read {}\nReason: {}",
+                                        entry.path().to_str().unwrap(),
+                                        err
+                                    );
+                                    continue;
+                                };
+                            }
+                            Err(err) => {
+                                eprintln!(
+                                    "Error: Failed to open {}\nReason: {}",
+                                    entry.path().to_str().unwrap(),
+                                    err
+                                );
+                                continue;
+                            }
+                        }
                     }
 
                     let mut lines = Vec::new();
