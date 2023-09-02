@@ -12,8 +12,6 @@ Simple, language-agnostic linter
 
 ## Background
 
-🚧 Linty is still under construction! The following is an ideal description following the principle of [Readme Driven Development](https://tom.preston-werner.com/2010/08/23/readme-driven-development.html).
-
 Have you ever fixed a bug and wished you could warn other developers about that exact pitfall?
 
 Do you wish there was an easy way to ban TODOs in your codebase?
@@ -55,8 +53,9 @@ For each rule, it will apply the regex to each file found in the set of provided
 If no globs are provided, it will apply the regex to _all_ files recursively, starting with the current directory.
 Files included in the `ignore` globs will be ignored.
 If the `--pre-commit` option is specified, it will only apply the rules to files staged with git.
-If explicit file paths are passed to Linty, it will only apply the rules to those files.
-By default, Linty respects `.gitignore` files, but you can enable checking `.gitignore` files with `--no-ignore`.
+If explicit file paths are passed to Linty, it will only apply the rules to those files (unless `--pre-commit` is also specified, in which case this input is ignored).
+By default, Linty respects `.gitignore` files, but you can enable checking `.gitignore` files with `--ignore`.
+Similarly, Linty won't lint hidden files, but you can enable that with `--hidden`.
 
 If any `error` rules fail, Linty will report all failing rules and exit with exit code 1. If no `error` rules fail, Linty will exit with exit code 0.
 If a `warn` rule fails, Linty will ask the user to confirm the warning manually.
