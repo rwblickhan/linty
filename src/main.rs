@@ -11,6 +11,7 @@ use std::io::BufReader;
 use std::io::Read;
 use std::io::Write;
 use std::path::Path;
+use std::process::Command;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -27,9 +28,6 @@ struct Args {
     #[arg(long)]
     no_confirm: bool,
 
-    /// Relative paths to files to lint (default: all files in current directory recursively)
-    files: Vec<String>,
-
     /// Include files listed in .gitignore and .ignore files
     #[arg(long)]
     ignored: bool,
@@ -37,6 +35,14 @@ struct Args {
     /// Include hidden files
     #[arg(long)]
     hidden: bool,
+
+    /// Limit to files staged for commit
+    #[arg(long, group = "input")]
+    pre_commit: bool,
+
+    /// Relative paths to files to lint (default: all files in current directory recursively)
+    #[arg(group = "input")]
+    files: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
@@ -92,16 +98,37 @@ fn main() -> anyhow::Result<()> {
 
     let current_dir = std::env::current_dir()?;
 
-    let mut specified_paths = Vec::new();
+    let mut specified_paths: Vec<OsString> = Vec::new();
 
-    for file in args.files {
-        specified_paths.push(
-            current_dir
-                .join(Path::new(&file))
-                .canonicalize()?
-                .as_os_str()
-                .to_owned(),
-        );
+    if args.pre_commit {
+        let git_output = Command::new("git")
+            .args(&["diff", "--staged", "--name-only"])
+            .output()?;
+
+        if git_output.status.success() {
+            let stdout = String::from_utf8(git_output.stdout)?;
+            let staged_paths: Vec<&str> = stdout.lines().collect();
+
+            for path in staged_paths {
+                specified_paths.push(Path::new(path).canonicalize()?.as_os_str().to_owned());
+            }
+        } else {
+            eprintln!(
+                "Error running git: {}",
+                String::from_utf8_lossy(&git_output.stderr)
+            );
+            std::process::exit(1);
+        }
+    } else {
+        for file in args.files {
+            specified_paths.push(
+                current_dir
+                    .join(Path::new(&file))
+                    .canonicalize()?
+                    .as_os_str()
+                    .to_owned(),
+            );
+        }
     }
 
     let mut violations: Vec<Violation> = Vec::new();
