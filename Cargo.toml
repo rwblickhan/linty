@@ -3,6 +3,8 @@ name = "linty"
 version = "0.2.0"
 edition = "2021"
 repository = "https://github.com/rwblickhan/linty.git"
+description = "Simple, language-agnostic linter"
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
