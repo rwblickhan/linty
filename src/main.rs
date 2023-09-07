@@ -7,11 +7,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ffi::OsString;
 use std::fs::File;
-use std::io::BufReader;
-use std::io::Read;
-use std::io::Write;
+use std::io;
+use std::io::{BufReader, Read, Write};
 use std::path::Path;
-use std::process::Command;
+use std::process::{exit, Command};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -85,10 +84,13 @@ struct Violation {
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
-    let file = if let Some(config_path) = args.config_path {
-        File::open(Path::new(config_path.as_str()))?
-    } else {
-        File::open(Path::new(".lintyconfig.json"))?
+    let config_path = args.config_path.unwrap_or(".lintyconfig.json".to_owned());
+    let file = match File::open(Path::new(config_path.as_str())) {
+        Result::Ok(file) => file,
+        io::Result::Err(err) => {
+            eprintln!("Failed to find .lintyconfig.json with error: {err}");
+            exit(1);
+        }
     };
     let reader = BufReader::new(file);
 
@@ -117,7 +119,7 @@ fn main() -> anyhow::Result<()> {
                 "Error running git: {}",
                 String::from_utf8_lossy(&git_output.stderr)
             );
-            std::process::exit(1);
+            exit(1);
         }
     } else {
         for file in args.files {
@@ -263,7 +265,7 @@ fn main() -> anyhow::Result<()> {
                 "y" => break,
                 "n" => {
                     eprintln!("Failing due to warnings");
-                    std::process::exit(1);
+                    exit(1);
                 }
                 _ => continue,
             }
@@ -295,7 +297,7 @@ fn main() -> anyhow::Result<()> {
 
     if !&errors_by_id.is_empty() || (args.error_on_warning && !&warnings_by_id.is_empty()) {
         eprintln!("Failing due to errors");
-        std::process::exit(1);
+        exit(1);
     }
 
     Ok(())
