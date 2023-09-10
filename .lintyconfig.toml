@@ -1,0 +1,13 @@
+[[rules]]
+id = "WarnOnTodos"
+message = "Are you sure you meant to leave a TODO?"
+regex = "(TODO|todo)"
+severity = "warning"
+
+[[rules]]
+id = "NoXcxcInDocs"
+message = "Don't leave xcxc in docs!"
+regex = "(XCXC|xcxc)"
+severity = "error"
+includes = [ "**/*.md" ]
+excludes = [ "**/README.md" ]

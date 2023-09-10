@@ -1,5 +1,5 @@
-use anyhow::Ok;
 use clap::Parser;
+use core::result::Result::Ok;
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use ignore::WalkBuilder;
 use regex::{Regex, RegexBuilder};
@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ffi::OsString;
 use std::fs::File;
-use std::io;
 use std::io::{BufReader, Read, Write};
 use std::path::Path;
 use std::process::{exit, Command};
@@ -84,17 +83,11 @@ struct Violation {
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
-    let config_path = args.config_path.unwrap_or(".lintyconfig.json".to_owned());
-    let file = match File::open(Path::new(config_path.as_str())) {
-        Result::Ok(file) => file,
-        io::Result::Err(err) => {
-            eprintln!("Failed to find .lintyconfig.json with error: {err}");
-            exit(1);
-        }
-    };
-    let reader = BufReader::new(file);
 
-    let config: Config = serde_json::from_reader(reader)?;
+    let Ok(config) = read_config(&args) else {
+        eprintln!("Failed to find config file");
+        exit(1);
+    };
 
     let rules = generate_rules_from_config(&config)?;
 
@@ -301,6 +294,25 @@ fn main() -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+fn read_config(args: &Args) -> anyhow::Result<Config> {
+    let default_path_str = String::from(".lintyconfig.json");
+    let config_path_str = args.config_path.as_ref().unwrap_or(&default_path_str);
+    let path = Path::new(config_path_str.as_str());
+
+    let file = File::open(path)?;
+
+    let mut reader = BufReader::new(file);
+
+    match path.extension().and_then(std::ffi::OsStr::to_str) {
+        Some("toml") => {
+            let mut buf = String::new();
+            reader.read_to_string(&mut buf)?;
+            Ok(toml::from_str(buf.as_str())?)
+        }
+        _ => Ok(serde_json::from_reader(reader)?),
+    }
 }
 
 fn generate_rules_from_config(config: &Config) -> anyhow::Result<Vec<Rule>> {
