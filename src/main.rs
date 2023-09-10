@@ -85,7 +85,7 @@ fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     let Ok(config) = read_config(&args) else {
-        eprintln!("Failed to find config file");
+        eprintln!("Failed to find config file; do you need to create a .lintyconfig file?");
         exit(1);
     };
 
