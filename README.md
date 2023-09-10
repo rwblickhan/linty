@@ -8,6 +8,7 @@ Simple, language-agnostic linter
   - [Table of Contents](#table-of-contents)
   - [Background](#background)
   - [Usage](#usage)
+  - [Installation](#installation)
   - [Maintainers](#maintainers)
 
 ## Background
@@ -60,6 +61,15 @@ Similarly, Linty won't lint hidden files, but you can enable that with `--hidden
 If any `error` rules fail, Linty will report all failing rules and exit with exit code 1. If no `error` rules fail, Linty will exit with exit code 0.
 If a `warn` rule fails, Linty will ask the user to confirm the warning manually.
 If the `--error-on-warning` flag is used, warnings will instead be treated as errors; if the `--no-confirm` flag is used, Linty will just print the warning, with no manual confirmation.
+
+## Installation
+
+With Homebrew on macOS:
+
+```bash
+brew tap rwblickhan/linty
+brew install linty
+```
 
 ## Maintainers
 
