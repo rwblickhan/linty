@@ -101,7 +101,7 @@ fn main() -> anyhow::Result<()> {
     }
 
     let Ok(config) = read_config(args.config_path.as_ref().map(|s| s.as_str())) else {
-        eprintln!("Failed to find config file; do you need to create a .lintyconfig file?");
+        eprintln!("Failed to find config file; do you need to create a .lintyconfig.json file?");
         exit(1);
     };
 
@@ -362,18 +362,20 @@ fn init_config() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let config = RuleConfig {
-        id: String::from("WarnOnTodos"),
-        message: String::from("Are you sure you meant to leave a TODO?"),
-        regex: String::from("(TODO|todo)"),
-        severity: Severity::Warning,
-        includes: None,
-        excludes: None,
+    let config = Config {
+        rules: vec![RuleConfig {
+            id: String::from("WarnOnTodos"),
+            message: String::from("Are you sure you meant to leave a TODO?"),
+            regex: String::from("(TODO|todo)"),
+            severity: Severity::Warning,
+            includes: None,
+            excludes: None,
+        }],
     };
 
     let file = File::create(DEFAULT_CONFIG_PATH_STR)?;
     serde_json::to_writer_pretty(file, &config)?;
 
-    println!("Initialized example config at .lintyconfig");
+    println!("Initialized example config at {}", DEFAULT_CONFIG_PATH_STR);
     Ok(())
 }
