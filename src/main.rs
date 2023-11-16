@@ -109,6 +109,7 @@ fn main() -> anyhow::Result<()> {
 
     let config_path_str = args
         .config_path
+        .as_ref()
         .map(|s| s.as_str())
         .unwrap_or(DEFAULT_CONFIG_PATH_STR);
 
