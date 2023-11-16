@@ -11,6 +11,14 @@ use std::io::{BufReader, Read, Write};
 use std::path::Path;
 use std::process::{exit, Command};
 
+const DEFAULT_CONFIG_PATH_STR: &str = ".lintyconfig.json";
+
+#[derive(Parser, Debug)]
+enum Subcommand {
+    /// Initialize an empty .lintyconfig
+    Init,
+}
+
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
@@ -41,6 +49,9 @@ struct Args {
     /// Relative paths to files to lint (default: all files in current directory recursively)
     #[arg(group = "input")]
     files: Vec<String>,
+
+    #[command(subcommand)]
+    command: Option<Subcommand>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
@@ -84,7 +95,12 @@ struct Violation {
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let Ok(config) = read_config(&args) else {
+    if let Some(Subcommand::Init) = args.command {
+        init_config()?;
+        return Ok(());
+    }
+
+    let Ok(config) = read_config(args.config_path.as_ref().map(|s| s.as_str())) else {
         eprintln!("Failed to find config file; do you need to create a .lintyconfig file?");
         exit(1);
     };
@@ -296,11 +312,8 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn read_config(args: &Args) -> anyhow::Result<Config> {
-    let default_path_str = String::from(".lintyconfig.json");
-    let config_path_str = args.config_path.as_ref().unwrap_or(&default_path_str);
-    let path = Path::new(config_path_str.as_str());
-
+fn read_config(config_path: Option<&str>) -> anyhow::Result<Config> {
+    let path = Path::new(config_path.unwrap_or(DEFAULT_CONFIG_PATH_STR));
     let file = File::open(path)?;
 
     let mut reader = BufReader::new(file);
@@ -341,4 +354,26 @@ fn generate_rules_from_config(config: &Config) -> anyhow::Result<Vec<Rule>> {
         });
     }
     Ok(rules)
+}
+
+fn init_config() -> anyhow::Result<()> {
+    if let Ok(_) = read_config(Some(DEFAULT_CONFIG_PATH_STR)) {
+        println!("Config already exists!");
+        return Ok(());
+    }
+
+    let config = RuleConfig {
+        id: String::from("WarnOnTodos"),
+        message: String::from("Are you sure you meant to leave a TODO?"),
+        regex: String::from("(TODO|todo)"),
+        severity: Severity::Warning,
+        includes: None,
+        excludes: None,
+    };
+
+    let file = File::create(DEFAULT_CONFIG_PATH_STR)?;
+    serde_json::to_writer_pretty(file, &config)?;
+
+    println!("Initialized example config at .lintyconfig");
+    Ok(())
 }
