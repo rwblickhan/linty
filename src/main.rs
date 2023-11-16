@@ -349,11 +349,11 @@ fn generate_rules_from_config(config: &Config) -> anyhow::Result<Vec<Rule>> {
         let mut exclude_globs = GlobSetBuilder::new();
 
         for include in rule_config.includes.as_ref().unwrap_or(&Vec::new()) {
-            include_globs.add(Glob::new(include.as_str())?);
+            include_globs.add(Glob::new(&include)?);
         }
 
         for exclude in rule_config.excludes.as_ref().unwrap_or(&Vec::new()) {
-            exclude_globs.add(Glob::new(exclude.as_str())?);
+            exclude_globs.add(Glob::new(&exclude)?);
         }
 
         let regex = RegexBuilder::new(&rule_config.regex);
