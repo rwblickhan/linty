@@ -348,11 +348,11 @@ fn generate_rules_from_config(config: &Config) -> anyhow::Result<Vec<Rule>> {
         let mut include_globs = GlobSetBuilder::new();
         let mut exclude_globs = GlobSetBuilder::new();
 
-        for include in rule_config.includes.to_owned().unwrap_or(Vec::new()) {
+        for include in rule_config.includes.as_ref().unwrap_or(&Vec::new()) {
             include_globs.add(Glob::new(include.as_str())?);
         }
 
-        for exclude in rule_config.excludes.to_owned().unwrap_or(Vec::new()) {
+        for exclude in rule_config.excludes.as_ref().unwrap_or(&Vec::new()) {
             exclude_globs.add(Glob::new(exclude.as_str())?);
         }
 
