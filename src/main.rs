@@ -1,4 +1,5 @@
-use clap::Parser;
+use clap::{CommandFactory, Parser};
+use clap_complete::{generate, Shell};
 use core::result::Result::Ok;
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use ignore::WalkBuilder;
@@ -17,6 +18,8 @@ const DEFAULT_CONFIG_PATH_STR: &str = ".lintyconfig.json";
 enum Subcommand {
     /// Initialize an empty .lintyconfig
     Init,
+    /// Generate shell completions
+    Completions { shell: Shell },
 }
 
 #[derive(Parser, Debug)]
@@ -97,6 +100,11 @@ fn main() -> anyhow::Result<()> {
 
     if let Some(Subcommand::Init) = args.command {
         init_config()?;
+        return Ok(());
+    }
+
+    if let Some(Subcommand::Completions { shell }) = args.command {
+        generate(shell, &mut Args::command(), "linty", &mut std::io::stdout());
         return Ok(());
     }
 
