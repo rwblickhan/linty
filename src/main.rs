@@ -98,18 +98,23 @@ struct Violation {
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    if let Some(Subcommand::Init) = args.command {
-        init_config()?;
-        return Ok(());
+    match args.command {
+        Some(Subcommand::Completions { shell }) => {
+            generate(shell, &mut Args::command(), "linty", &mut std::io::stdout());
+            return Ok(());
+        }
+        Some(Subcommand::Init) => return init_config(),
+        None => {}
     }
 
-    if let Some(Subcommand::Completions { shell }) = args.command {
-        generate(shell, &mut Args::command(), "linty", &mut std::io::stdout());
-        return Ok(());
-    }
+    let config_path_str = args
+        .config_path
+        .map(|s| s.as_str())
+        .unwrap_or(DEFAULT_CONFIG_PATH_STR);
 
-    let Ok(config) = read_config(args.config_path.as_ref().map(|s| s.as_str())) else {
+    let Ok(config) = read_config(config_path_str) else {
         eprintln!("Failed to find config file; do you need to create a .lintyconfig.json file?");
+        eprintln!("Try running `linty init`");
         exit(1);
     };
 
@@ -320,10 +325,9 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn read_config(config_path: Option<&str>) -> anyhow::Result<Config> {
-    let path = Path::new(config_path.unwrap_or(DEFAULT_CONFIG_PATH_STR));
+fn read_config(config_path: &str) -> anyhow::Result<Config> {
+    let path = Path::new(config_path);
     let file = File::open(path)?;
-
     let mut reader = BufReader::new(file);
 
     match path.extension().and_then(std::ffi::OsStr::to_str) {
@@ -365,12 +369,12 @@ fn generate_rules_from_config(config: &Config) -> anyhow::Result<Vec<Rule>> {
 }
 
 fn init_config() -> anyhow::Result<()> {
-    if let Ok(_) = read_config(Some(DEFAULT_CONFIG_PATH_STR)) {
-        println!("Config already exists!");
+    if let Ok(_) = read_config(DEFAULT_CONFIG_PATH_STR) {
+        println!("Config already exists at {}", DEFAULT_CONFIG_PATH_STR);
         return Ok(());
     }
 
-    let config = Config {
+    let default_config = Config {
         rules: vec![RuleConfig {
             id: String::from("WarnOnTodos"),
             message: String::from("Are you sure you meant to leave a TODO?"),
@@ -382,7 +386,7 @@ fn init_config() -> anyhow::Result<()> {
     };
 
     let file = File::create(DEFAULT_CONFIG_PATH_STR)?;
-    serde_json::to_writer_pretty(file, &config)?;
+    serde_json::to_writer_pretty(file, &default_config)?;
 
     println!("Initialized example config at {}", DEFAULT_CONFIG_PATH_STR);
     Ok(())
