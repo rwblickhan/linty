@@ -113,11 +113,7 @@ fn main() -> anyhow::Result<()> {
         .map(|s| s.as_str())
         .unwrap_or(DEFAULT_CONFIG_PATH_STR);
 
-    let Ok(config) = read_config(config_path_str) else {
-        eprintln!("Failed to find config file; do you need to create a .lintyconfig.json file?");
-        eprintln!("Try running `linty init`!");
-        exit(1);
-    };
+    let config = read_config(config_path_str);
 
     let rules = generate_rules_from_config(&config)?;
 
@@ -326,18 +322,37 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn read_config(config_path: &str) -> anyhow::Result<Config> {
+fn read_config(config_path: &str) -> Config {
     let path = Path::new(config_path);
-    let file = File::open(path)?;
+    let Ok(file) = File::open(path) else {
+        eprintln!("Failed to find config file; do you need to create a .lintyconfig.json file?");
+        eprintln!("Try running `linty init`!");
+        exit(1);
+    };
+
     let mut reader = BufReader::new(file);
 
     match path.extension().and_then(std::ffi::OsStr::to_str) {
         Some("toml") => {
             let mut buf = String::new();
-            reader.read_to_string(&mut buf)?;
-            Ok(toml::from_str(buf.as_str())?)
+            reader
+                .read_to_string(&mut buf)
+                .expect("Unexpected failure while reading config file");
+            match toml::from_str(buf.as_str()) {
+                Ok(config) => config,
+                Err(err) => {
+                    eprintln!("Failed to parse config file at {config_path} as TOML: {err}");
+                    exit(1);
+                }
+            }
         }
-        _ => Ok(serde_json::from_reader(reader)?),
+        _ => match serde_json::from_reader(reader) {
+            Ok(config) => config,
+            Err(err) => {
+                eprintln!("Failed to parse config file at {config_path} as JSON: {err}");
+                exit(1);
+            }
+        },
     }
 }
 
@@ -370,11 +385,6 @@ fn generate_rules_from_config(config: &Config) -> anyhow::Result<Vec<Rule>> {
 }
 
 fn init_config() -> anyhow::Result<()> {
-    if let Ok(_) = read_config(DEFAULT_CONFIG_PATH_STR) {
-        println!("Config already exists at {}", DEFAULT_CONFIG_PATH_STR);
-        return Ok(());
-    }
-
     let default_config = Config {
         rules: vec![RuleConfig {
             id: String::from("WarnOnTodos"),
@@ -386,7 +396,13 @@ fn init_config() -> anyhow::Result<()> {
         }],
     };
 
-    let file = File::create(DEFAULT_CONFIG_PATH_STR)?;
+    let Ok(file) = File::create(DEFAULT_CONFIG_PATH_STR) else {
+        eprintln!(
+            "Failed to create config file at {}",
+            DEFAULT_CONFIG_PATH_STR
+        );
+        exit(1);
+    };
     serde_json::to_writer_pretty(file, &default_config)?;
 
     println!("Initialized example config at {}", DEFAULT_CONFIG_PATH_STR);

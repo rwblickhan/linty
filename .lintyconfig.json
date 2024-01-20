@@ -13,6 +13,14 @@
       "severity": "error",
       "includes": ["**/*.md"],
       "excludes": ["**/README.md"]
+    },
+    {
+      "id": "AlwaysBumpDate",
+      "message": "Don't leave xcxc in docs!",
+      "regex": "\\d\\d\\d\\d-\\d\\d-\\d\\d",
+      "severity": "error",
+      "includes": ["**/*.md"],
+      "excludes": ["**/README.md"]
     }
   ]
 }
