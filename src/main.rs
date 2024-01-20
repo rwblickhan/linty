@@ -115,7 +115,7 @@ fn main() -> anyhow::Result<()> {
 
     let Ok(config) = read_config(config_path_str) else {
         eprintln!("Failed to find config file; do you need to create a .lintyconfig.json file?");
-        eprintln!("Try running `linty init`");
+        eprintln!("Try running `linty init`!");
         exit(1);
     };
 
