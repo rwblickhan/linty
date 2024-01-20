@@ -122,6 +122,7 @@ fn main() -> anyhow::Result<()> {
     let mut specified_paths: Vec<OsString> = Vec::new();
 
     if args.pre_commit {
+        println!("Checking staged files...");
         let git_output = Command::new("git")
             .args(&["diff", "--staged", "--name-only"])
             .output()?;
@@ -129,6 +130,11 @@ fn main() -> anyhow::Result<()> {
         if git_output.status.success() {
             let stdout = String::from_utf8(git_output.stdout)?;
             let staged_paths: Vec<&str> = stdout.lines().collect();
+
+            if staged_paths.is_empty() {
+                eprintln!("No staged files found!");
+                exit(1);
+            }
 
             for path in staged_paths {
                 specified_paths.push(Path::new(path).canonicalize()?.as_os_str().to_owned());
